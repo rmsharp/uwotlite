@@ -1,0 +1,35 @@
+pandoc: 3.1.11
+pkgdown: 2.2.0
+pkgdown_sha: ~
+articles:
+  articles/abparams: abparams.html
+  articles/embedding-new-data: embedding-new-data.html
+  articles/fast-sgd: fast-sgd.html
+  articles/hnsw-umap: hnsw-umap.html
+  articles/init: init.html
+  articles/leopold: leopold.html
+  articles/locally-scaled-neighbors: locally-scaled-neighbors.html
+  articles/lvish: lvish.html
+  articles/metric-learning: metric-learning.html
+  articles/mid-spectral-initialization: mid-spectral-initialization.html
+  articles/mixed-data-types: mixed-data-types.html
+  articles/mutual-nearest-neighbors: mutual-nearest-neighbors.html
+  articles/nearest-neighbors-format: nearest-neighbors-format.html
+  articles/optional-dependencies: optional-dependencies.html
+  articles/pacmap-comparison: pacmap-comparison.html
+  articles/performance: performance.html
+  articles/pycompare: pycompare.html
+  articles/reproducibility: reproducibility.html
+  articles/rnndescent-umap: rnndescent-umap.html
+  articles/sparse-data-example: sparse-data-example.html
+  articles/tumap: tumap.html
+  articles/umap-examples: umap-examples.html
+  articles/umap-for-tsne: umap-for-tsne.html
+  articles/umap-simple: umap-simple.html
+  articles/umap2: umap2.html
+  uwot: uwot.html
+  articles/whatsnew: whatsnew.html
+last_built: 2026-01-16T23:17Z
+urls:
+  reference: https://rmsharp.github.io/uwotlite/reference
+  article: https://rmsharp.github.io/uwotlite/articles
