@@ -21,6 +21,9 @@
 #include <vector>
 #include <cstdint>
 
+// Required for R::runif
+#include <Rcpp.h>
+
 // Using sitmo (MIT licensed) instead of dqrng (AGPL)
 #include <sitmo.h>
 
