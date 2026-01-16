@@ -3,8 +3,8 @@ Title: The Uniform Manifold Approximation and Projection (UMAP) Method for
     Dimensionality Reduction (MIT-Compatible Fork)
 Version: 0.2.4.9000
 Authors@R: c(
-    person("James", "Melville", , "jlmelville@gmail.com", role = c("aut", "cph")),
-    person("R. Mark Sharp", , "rmsharp@me.com", role = c("cre", "ctb")),
+    person("James", "Melville", email = "jlmelville@gmail.com", role = c("aut", "cph")),
+    person("R. Mark", "Sharp", email = "rmsharp@me.com", role = c("cre", "ctb")),
     person("Aaron", "Lun", role = "ctb"),
     person("Mohamed Nadhir", "Djekidel", role = "ctb"),
     person("Yuhan", "Hao", role = "ctb"),
