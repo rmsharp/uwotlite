@@ -24,6 +24,7 @@ License: MIT + file LICENSE
 URL: https://github.com/rmsharp/uwotlite
 BugReports: https://github.com/rmsharp/uwotlite/issues
 Depends:
+    R (>= 4.3),
     Matrix
 Imports:
     FNN,
