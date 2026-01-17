@@ -1,32 +1,58 @@
 ---
-title: "Dimensionality Reduction for Encoded Categorical Data with uwotlite"
-output: rmarkdown::html_vignette
+title: "Dimensionality Reduction with UMAP"
+subtitle: "Complementing Categorical Encoding with uwotlite"
+author: "Based on techniques from Tidy Modeling with R"
+format:
+  html:
+    code-fold: true
+    toc: true
+    toc-depth: 3
 vignette: >
-  %\VignetteIndexEntry{Dimensionality Reduction for Encoded Categorical Data with uwotlite}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Dimensionality Reduction with UMAP}
+  %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include=FALSE}
+```{r}
+#| label: setup
+#| include: false
+
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.width = 7,
-  fig.height = 5
+  fig.height = 5,
+  message = FALSE,
+  warning = FALSE
 )
+
+# Check for required packages
+required_pkgs <- c("modeldata", "ggplot2", "dplyr", "scales")
+have_pkgs <- vapply(required_pkgs, requireNamespace, logical(1), quietly = TRUE)
+if (!all(have_pkgs)) {
+  knitr::opts_chunk$set(eval = FALSE)
+}
 ```
 
-This vignette demonstrates how to use `uwotlite` for dimensionality reduction,
-complementing the categorical encoding approaches from
-[Chapter 17 of Tidy Modeling with R](https://www.tmwr.org/categorical).
+This vignette demonstrates UMAP (Uniform Manifold Approximation and Projection) dimensionality reduction using `uwotlite`, as a complement to the categorical encoding techniques shown in [Chapter 17 of Tidy Modeling with R](https://www.tmwr.org/categorical).
 
-While Chapter 17 focuses on encoding categorical variables, `uwotlite` provides
-UMAP (Uniform Manifold Approximation and Projection) for reducing high-dimensional
-encoded data to visualizable or more manageable dimensions.
+## Introduction
+
+While Chapter 17 of TMWR focuses on encoding categorical variables into numeric representations, another common preprocessing task is *dimensionality reduction*—transforming many features into fewer features while preserving important structure.
+
+UMAP is a nonlinear dimensionality reduction technique that:
+
+- Preserves both local and global structure in data
+- Scales well to large datasets
+- Can be used for visualization (2D) or feature creation (higher dimensions)
+- Supports supervised reduction using outcome information
+
+The `uwotlite` package provides an MIT-licensed UMAP implementation.
 
 ## Setup
 
-```{r libraries, message=FALSE, warning=FALSE}
+```{r}
+#| label: libraries
 library(uwotlite)
 library(dplyr)
 library(ggplot2)
@@ -42,20 +68,14 @@ train_idx <- sample(seq_len(n), size = floor(0.8 * n))
 ames_train <- ames[train_idx, ]
 ames_test <- ames[-train_idx, ]
 ```
-## The Use Case: Visualizing After Categorical Encoding
 
-After encoding categorical variables (as shown in the embedmit categorical
-encoding vignette), you may have many numeric features. UMAP can reduce these
-to 2 dimensions for visualization or to a smaller number of dimensions for
-modeling.
+## Preparing Numeric Features
 
-## Basic UMAP with uwotlite
+After encoding categorical variables (using effect encodings as shown in the `embedmit` vignette), you often have many numeric features. Let's prepare a numeric dataset from the Ames data:
 
-First, let's prepare a numeric dataset from the Ames data:
-
-```{r prepare-data}
-# Select and prepare numeric features
-# In practice, you might first encode categoricals with embedmit
+```{r}
+#| label: prepare-data
+# Select numeric features
 ames_numeric <- ames_train %>%
   select(
     Lot_Area, Gr_Liv_Area, Year_Built, Year_Remod_Add,
@@ -71,13 +91,18 @@ ames_numeric <- ames_train %>%
 
 # Convert to matrix for uwotlite
 ames_matrix <- as.matrix(ames_numeric)
+
+dim(ames_matrix)
 ```
 
-## Running UMAP
+We have `r nrow(ames_matrix)` observations and `r ncol(ames_matrix)` numeric features.
+
+## Basic UMAP
 
 The `umap()` function performs dimensionality reduction:
 
-```{r umap-basic}
+```{r}
+#| label: umap-basic
 set.seed(123)
 ames_umap <- umap(
   ames_matrix,
@@ -95,11 +120,17 @@ umap_df <- data.frame(
   Sale_Price = ames_train$Sale_Price,
   Neighborhood = ames_train$Neighborhood
 )
+
+head(umap_df)
 ```
 
 ## Visualizing the UMAP Embedding
 
-```{r umap-viz-price, fig.cap="UMAP projection colored by Sale Price"}
+### Colored by Sale Price
+
+```{r}
+#| label: umap-viz-price
+#| fig-cap: "UMAP projection of Ames housing features colored by sale price. Similar houses (in terms of the 16 numeric features) are positioned near each other."
 ggplot(umap_df, aes(UMAP1, UMAP2, color = Sale_Price)) +
   geom_point(alpha = 0.6, size = 1) +
   scale_color_viridis_c(labels = scales::dollar) +
@@ -112,7 +143,13 @@ ggplot(umap_df, aes(UMAP1, UMAP2, color = Sale_Price)) +
   coord_fixed()
 ```
 
-```{r umap-viz-neighborhood, fig.cap="UMAP projection colored by Neighborhood"}
+The UMAP projection reveals structure in the data—houses with similar characteristics cluster together, and there's a gradient of sale prices across the embedding.
+
+### Colored by Neighborhood
+
+```{r}
+#| label: umap-viz-neighborhood
+#| fig-cap: "UMAP projection colored by neighborhood. Some neighborhoods form distinct clusters while others overlap."
 # Show top 8 neighborhoods for clarity
 top_neighborhoods <- ames_train %>%
   count(Neighborhood, sort = TRUE) %>%
@@ -135,7 +172,19 @@ umap_df %>%
 
 Understanding the main parameters helps tune UMAP for your use case:
 
-```{r param-comparison, fig.height=8, fig.cap="Effect of n_neighbors on UMAP embedding"}
+| Parameter | Description | Effect |
+|-----------|-------------|--------|
+| `n_neighbors` | Size of local neighborhood | Higher = more global structure, lower = more local detail |
+| `min_dist` | Minimum distance between points | Higher = more spread out, lower = tighter clusters |
+| `n_components` | Output dimensions | 2 for visualization, higher for feature creation |
+| `metric` | Distance measure | "euclidean", "cosine", "manhattan", etc. |
+
+### Effect of n_neighbors
+
+```{r}
+#| label: param-comparison
+#| fig-cap: "Effect of n_neighbors on UMAP embedding. Lower values emphasize local structure, higher values capture more global patterns."
+#| fig-height: 8
 set.seed(123)
 
 # Compare different n_neighbors values
@@ -160,19 +209,12 @@ bind_rows(umap_results) %>%
   theme_minimal()
 ```
 
-| Parameter | Effect |
-|-----------|--------|
-| `n_neighbors` | Higher = more global structure, lower = more local detail |
-| `min_dist` | Higher = more spread out, lower = tighter clusters |
-| `n_components` | Number of output dimensions (2 for visualization) |
-| `metric` | Distance measure ("euclidean", "cosine", "manhattan", etc.) |
-
 ## Transforming New Data
 
-A key feature of uwotlite is the ability to transform new data using a
-fitted UMAP model:
+A key feature of `uwotlite` is the ability to transform new data using a fitted UMAP model. This is essential for prediction workflows.
 
-```{r umap-transform}
+```{r}
+#| label: umap-transform
 # Fit UMAP with ret_model = TRUE to enable transformation
 set.seed(123)
 ames_umap_model <- umap(
@@ -201,7 +243,14 @@ ames_test_matrix <- as.matrix(ames_test_numeric)
 # Transform test data
 test_umap <- umap_transform(ames_test_matrix, ames_umap_model)
 
-# Visualize train and test together
+head(test_umap)
+```
+
+### Visualizing Train and Test Together
+
+```{r}
+#| label: train-test-viz
+#| fig-cap: "UMAP projection showing both training and test data. Test data is transformed using the model fitted on training data."
 train_df <- data.frame(
   UMAP1 = ames_umap_model$embedding[, 1],
   UMAP2 = ames_umap_model$embedding[, 2],
@@ -227,9 +276,9 @@ bind_rows(train_df, test_df) %>%
 
 ## Using UMAP Components as Features
 
-UMAP components can be used as features in downstream models:
-
-```{r umap-features}
+UMAP components can serve as input features for downstream models:
+```{r}
+#| label: umap-features
 # Create UMAP features for modeling
 train_features <- data.frame(
   UMAP1 = ames_umap_model$embedding[, 1],
@@ -240,25 +289,24 @@ train_features <- data.frame(
 # Simple linear model using UMAP features
 umap_lm <- lm(Sale_Price ~ UMAP1 + UMAP2, data = train_features)
 summary(umap_lm)
-
-# R-squared shows how much variance UMAP captures
-cat("\nUMAP explains", round(summary(umap_lm)$r.squared * 100, 1),
-    "% of Sale_Price variance\n")
 ```
+
+The R-squared tells us how much of the sale price variance is captured by just two UMAP dimensions.
 
 ## Supervised UMAP
 
-uwotlite supports supervised UMAP, which uses label information to guide
-the embedding:
+`uwotlite` supports *supervised* UMAP, which uses label information to guide the embedding. This can improve the embedding for prediction tasks:
 
-```{r supervised-umap, fig.cap="Supervised UMAP uses Sale Price to guide the projection"}
+```{r}
+#| label: supervised-umap
+#| fig-cap: "Supervised UMAP uses the Sale Price outcome to guide the projection, potentially creating better separation for prediction tasks."
 set.seed(123)
 ames_supervised <- umap(
   ames_matrix,
   n_neighbors = 15,
   n_components = 2,
   min_dist = 0.1,
-  y = ames_train$Sale_Price,  # Use outcome to guide embedding
+  y = ames_train$Sale_Price,
   target_weight = 0.5,
   verbose = FALSE
 )
@@ -282,35 +330,46 @@ ggplot(supervised_df, aes(UMAP1, UMAP2, color = Sale_Price)) +
 
 ## Integration with embedmit
 
-For a complete workflow combining categorical encoding and UMAP, use
-`embedmit` with `step_umap()`:
-```{r embedmit-integration, eval=FALSE}
+For a complete workflow combining categorical encoding and UMAP, use `embedmit` with `step_umap()`:
+
+```{r}
+#| label: embedmit-integration
+#| eval: false
 library(embedmit)
 library(recipes)
 
 # Complete pipeline: encode categoricals, then reduce dimensions
 ames_recipe <- recipe(Sale_Price ~ ., data = ames_train) %>%
-  # Encode categorical variables
+  # Encode high-cardinality categorical
   step_lencode_mixed(Neighborhood, outcome = vars(Sale_Price)) %>%
+  # Create dummy variables for remaining categoricals
   step_dummy(all_nominal_predictors()) %>%
   # Reduce to UMAP components
   step_umap(all_numeric_predictors(), num_comp = 5, neighbors = 15)
 ```
 
+This pipeline:
+
+1. Encodes `Neighborhood` using mixed effects (see the embedmit vignette)
+2. Creates dummy variables for other categorical predictors
+3. Reduces all numeric features to 5 UMAP components
+
 ## Summary
 
-`uwotlite` provides MIT-licensed UMAP implementation for:
+UMAP is a powerful dimensionality reduction technique that complements categorical encoding:
 
-- **Visualization**: Reduce high-dimensional encoded data to 2D
-- **Feature creation**: Generate low-dimensional features for modeling
-- **Transformation**: Apply fitted UMAP to new data
-- **Supervised learning**: Guide embeddings with outcome information
+| Use Case | Technique |
+|----------|-----------|
+| Encode high-cardinality categoricals | Effect encodings (`step_lencode_*`) |
+| Visualize high-dimensional data | UMAP with `n_components = 2` |
+| Create features from many predictors | UMAP with `n_components > 2` |
+| Improve embeddings for prediction | Supervised UMAP with `y` parameter |
+| Apply to new data | `umap_transform()` with `ret_model = TRUE` |
 
-Combined with categorical encoding from `embedmit`, you have a complete
-toolkit for handling complex feature engineering tasks.
+The `uwotlite` package provides an MIT-licensed UMAP implementation that integrates seamlessly with `embedmit` for complete feature engineering workflows.
 
-## Additional Resources
+## References
 
-- [UMAP paper](https://arxiv.org/abs/1802.03426)
-- [Understanding UMAP](https://pair-code.github.io/understanding-umap/)
-- [embedmit package](https://github.com/rmsharp/embedmit)
+- McInnes, L., Healy, J., & Melville, J. (2018). UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction. *arXiv:1802.03426*.
+- Kuhn, M., & Silge, J. (2022). *Tidy Modeling with R*. O'Reilly Media.
+- [Understanding UMAP](https://pair-code.github.io/understanding-umap/) - Interactive visualization guide
